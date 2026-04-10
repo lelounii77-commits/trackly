@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Trackly — Academic Risk Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0C0E14;
+  --surface:#13151E;
+  --surface2:#1A1D28;
+  --surface3:#21253A;
+  --border:rgba(255,255,255,0.06);
+  --border2:rgba(255,255,255,0.1);
+  --accent:#E8643A;
+  --accent2:#F0A070;
+  --warn:#E8C43A;
+  --safe:#3AE87A;
+  --text:#F0EEE8;
+  --text2:#9994A8;
+  --text3:#5C5870;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:64px 1fr;height:100vh}
+.topbar{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--border);background:var(--surface)}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;display:flex;flex-direction:column;overflow-y:auto}
+.main{overflow-y:auto;padding:32px}
+
+/* ── Topbar ── */
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.logo-text{font-family:'DM Serif Display',serif;font-size:20px;letter-spacing:-0.3px}
+.logo-sub{font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-left:2px}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.advisor-badge{display:flex;align-items:center;gap:8px;background:var(--surface2);padding:6px 14px;border-radius:20px;font-size:13px;color:var(--text2)}
+.advisor-dot{width:7px;height:7px;border-radius:50%;background:var(--safe)}
+
+/* ── Sidebar ── */
+.sidebar-section{padding:0 16px;margin-bottom:8px}
+.sidebar-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:0 12px;margin-bottom:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;margin-bottom:2px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:rgba(232,100,58,0.15);color:var(--accent)}
+.nav-icon{width:16px;height:16px;opacity:0.7}
+.nav-item.active .nav-icon{opacity:1}
+.sidebar-divider{height:1px;background:var(--border);margin:16px 16px}
+
+.sidebar-stats{padding:16px;margin:0 12px;background:var(--surface2);border-radius:12px;margin-top:auto}
+.sidebar-stats-title{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}
+.stat-row:last-child{margin-bottom:0}
+.stat-val{font-weight:600;color:var(--text)}
+.stat-label{color:var(--text2)}
+.stat-dot-red{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:5px}
+.stat-dot-green{width:6px;height:6px;border-radius:50%;background:var(--safe);display:inline-block;margin-right:5px}
+
+/* ── Page views ── */
+.page{display:none}
+.page.active{display:block}
+
+/* ── Dashboard page ── */
+.page-header{margin-bottom:28px}
+.page-title{font-family:'DM Serif Display',serif;font-size:28px;letter-spacing:-0.5px;margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text2)}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px}
+.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px}
+.kpi-val{font-family:'DM Serif Display',serif;font-size:32px;letter-spacing:-1px;line-height:1}
+.kpi-val.red{color:var(--accent)}
+.kpi-val.green{color:var(--safe)}
+.kpi-val.warn{color:var(--warn)}
+.kpi-change{font-size:11px;color:var(--text3);margin-top:6px}
+
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px}
+.chart-title{font-size:13px;font-weight:600;margin-bottom:18px;color:var(--text)}
+
+/* Bar chart */
+.bar-group{margin-bottom:10px}
+.bar-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px}
+.bar-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width 1s ease}
+
+/* Semester pills */
+.sem-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sem-card{background:var(--surface2);border-radius:10px;padding:14px;text-align:center}
+.sem-name{font-size:11px;color:var(--text3);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px}
+.sem-count{font-family:'DM Serif Display',serif;font-size:24px;color:var(--accent)}
+
+/* ── Students page ── */
+.filters-bar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-select{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none}
+.filter-select:focus{border-color:var(--accent)}
+.search-box{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.search-box::placeholder{color:var(--text3)}
+.search-box:focus{border-color:var(--accent)}
+.results-count{font-size:12px;color:var(--text3);margin-left:auto}
+
+.students-table{width:100%;border-collapse:collapse}
+.students-table th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);text-align:left;padding:10px 14px;border-bottom:1px solid var(--border)}
+.students-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.students-table tr:hover td{background:var(--surface2);cursor:pointer}
+.risk-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.risk-badge.high{background:rgba(232,100,58,0.15);color:var(--accent)}
+.risk-badge.critical{background:rgba(232,100,58,0.25);color:#FF6B3D}
+.risk-badge.medium{background:rgba(232,196,58,0.15);color:var(--warn)}
+.risk-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.gpa-bar{display:flex;align-items:center;gap:8px}
+.gpa-mini{height:4px;width:60px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.gpa-mini-fill{height:100%;background:var(--accent2);border-radius:2px}
+.att-val{color:var(--text2)}
+.att-val.low{color:var(--accent)}
+.student-id-cell{font-family:monospace;font-size:12px;color:var(--text3)}
+
+/* ── Student detail modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:680px;max-height:85vh;overflow-y:auto;padding:32px}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px}
+.modal-title{font-family:'DM Serif Display',serif;font-size:22px}
+.modal-sub{font-size:12px;color:var(--text3);margin-top:4px}
+.modal-close{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:none;color:var(--text2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+
+.risk-meter{background:var(--surface2);border-radius:12px;padding:20px;margin-bottom:20px;text-align:center}
+.risk-meter-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px}
+.risk-pct{font-family:'DM Serif Display',serif;font-size:48px;color:var(--accent)}
+.risk-pct-sub{font-size:12px;color:var(--text2);margin-top:4px}
+.risk-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:14px}
+.risk-fill{height:100%;background:linear-gradient(90deg,var(--warn),var(--accent));border-radius:4px;transition:width 0.8s ease}
+
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.detail-item{background:var(--surface2);border-radius:10px;padding:14px}
+.detail-item-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.detail-item-val{font-size:16px;font-weight:600;color:var(--text)}
+.detail-item-val.warn{color:var(--accent)}
+
+.rec-box{background:rgba(232,100,58,0.08);border:1px solid rgba(232,100,58,0.2);border-radius:12px;padding:18px}
+.rec-box-title{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+.rec-loading{color:var(--text3);font-size:13px;font-style:italic}
+.rec-text{font-size:13px;line-height:1.7;color:var(--text2);white-space:pre-wrap}
+
+.modal-actions{display:flex;gap:10px;margin-top:20px}
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;border:none;font-weight:500;transition:all 0.15s}
+.btn-primary{background:var(--accent);color:white}
+.btn-primary:hover{background:#D45A30}
+.btn-secondary{background:var(--surface2);color:var(--text2);border:1px solid var(--border2)}
+.btn-secondary:hover{background:var(--surface3);color:var(--text)}
+
+/* ── Groq key input ── */
+.groq-section{background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:center}
+.groq-input{flex:1;background:var(--surface3);border:1px solid var(--border2);border-radius:6px;padding:7px 12px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none}
+.groq-input:focus{border-color:var(--accent)}
+.groq-label{font-size:11px;color:var(--text3);min-width:70px}
+
+/* Loading skeleton */
+.skeleton{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:6px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* scrollbar */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:4px}
+
+/* animate bars on load */
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kpi-card{animation:fadeIn 0.4s ease both}
+.kpi-card:nth-child(2){animation-delay:0.05s}
+.kpi-card:nth-child(3){animation-delay:0.1s}
+.kpi-card:nth-child(4){animation-delay:0.15s}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon">🎓</div>
+      <div>
+        <div class="logo-text">Trackly</div>
+        <div class="logo-sub">Academic Risk Intelligence</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="advisor-badge">
+        <span class="advisor-dot"></span>
+        Academic Advisor Portal
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Main</div>
+      <div class="nav-item active" onclick="showPage('dashboard')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('students')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><circle cx="6" cy="4" r="3"/><path d="M0 13c0-3.3 2.7-6 6-6s6 2.7 6 6H0z"/><circle cx="12" cy="4" r="2.5"/><path d="M11 13h5c0-2.8-1.8-5.1-4.2-5.8C12.5 8 13 9 13 10h-2v3z"/></svg>
+        At-Risk Students
+      </div>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Semester</div>
+      <div class="nav-item" onclick="filterBySemester('2025_Spring')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M1 8h14" stroke="currentColor" stroke-width="1.5"/></svg>
+        2025 Spring
+      </div>
+      <div class="nav-item" onclick="filterBySemester('2024_Fall')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M1 8h14" stroke="currentColor" stroke-width="1.5"/></svg>
+        2024 Fall
+      </div>
+      <div class="nav-item" onclick="filterBySemester('2024_Spring')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M1 8h14" stroke="currentColor" stroke-width="1.5"/></svg>
+        2024 Spring
+      </div>
+      <div class="nav-item" onclick="filterBySemester('2023_Fall')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="4" width="14" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5 1v4M11 1v4M1 8h14" stroke="currentColor" stroke-width="1.5"/></svg>
+        2023 Fall
+      </div>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <div style="padding:0 12px;margin-bottom:16px">
+      <div class="sidebar-stats">
+        <div class="sidebar-stats-title">Quick Stats</div>
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot-red"></span>At Risk</span>
+          <span class="stat-val">5,727</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot-green"></span>Safe</span>
+          <span class="stat-val">14,273</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Risk Rate</span>
+          <span class="stat-val" style="color:var(--accent)">28.6%</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Dashboard Page -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Academic Risk Overview</div>
+        <div class="page-sub">Showing prediction results across all semesters — 20,000 student records</div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Students</div>
+          <div class="kpi-val">20,000</div>
+          <div class="kpi-change">Across 4 semesters</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">At Risk</div>
+          <div class="kpi-val red">5,727</div>
+          <div class="kpi-change">Require advisor attention</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Risk Rate</div>
+          <div class="kpi-val warn">28.6%</div>
+          <div class="kpi-change">Of total student records</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Safe Students</div>
+          <div class="kpi-val green">14,273</div>
+          <div class="kpi-change">No intervention needed</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">At-Risk Students by Major</div>
+          <div id="major-bars"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">At-Risk Students by Semester</div>
+          <div class="sem-grid" id="sem-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students Page -->
+    <div class="page" id="page-students">
+      <div class="page-header">
+        <div class="page-title">At-Risk Students</div>
+        <div class="page-sub">Click on any student to view details and get AI recommendations</div>
+      </div>
+
+      <div class="filters-bar">
+        <select class="filter-select" id="filter-semester" onchange="applyFilters()">
+          <option value="">All Semesters</option>
+          <option value="2025_Spring">2025 Spring</option>
+          <option value="2024_Fall">2024 Fall</option>
+          <option value="2024_Spring">2024 Spring</option>
+          <option value="2023_Fall">2023 Fall</option>
+        </select>
+        <select class="filter-select" id="filter-major" onchange="applyFilters()">
+          <option value="">All Majors</option>
+          <option value="Artificial Intelligence">Artificial Intelligence</option>
+          <option value="Computer Science">Computer Science</option>
+          <option value="Cybersecurity">Cybersecurity</option>
+          <option value="Data Science">Data Science</option>
+          <option value="Information Systems">Information Systems</option>
+          <option value="Information Technology">Information Technology</option>
+          <option value="Software Engineering">Software Engineering</option>
+        </select>
+        <input class="search-box" id="search-box" placeholder="Search by student ID..." oninput="applyFilters()"/>
+        <span class="results-count" id="results-count"></span>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+        <table class="students-table">
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Semester</th>
+              <th>Major</th>
+              <th>GPA</th>
+              <th>Attendance</th>
+              <th>Missed</th>
+              <th>Risk Level</th>
+            </tr>
+          </thead>
+          <tbody id="students-tbody"></tbody>
+        </table>
+        <div id="table-footer" style="padding:14px 16px;font-size:12px;color:var(--text3);border-top:1px solid var(--border)"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Student Detail Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">Student Details</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="risk-meter">
+      <div class="risk-meter-label">Risk Probability</div>
+      <div class="risk-pct" id="modal-risk-pct">—</div>
+      <div class="risk-pct-sub" id="modal-risk-label">Academic Risk Detected</div>
+      <div class="risk-track"><div class="risk-fill" id="modal-risk-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="detail-grid" id="modal-details"></div>
+
+    <div class="groq-section">
+      <span class="groq-label">Groq API Key</span>
+      <input class="groq-input" id="groq-key-input" type="password" placeholder="gsk_... (optional for AI recommendations)"/>
+      <button class="btn btn-secondary" onclick="getRecommendation()" style="white-space:nowrap;font-size:12px">Get AI Advice</button>
+    </div>
+
+    <div class="rec-box">
+      <div class="rec-box-title">
+        <span>✦</span> Advisor Recommendations
+      </div>
+      <div class="rec-text" id="modal-rec">Enter a Groq API key above and click "Get AI Advice" to generate personalized recommendations for this student.</div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────
+const API = 'http://127.0.0.1:8000';
+let allStudents = [];
+let filtered = [];
+let currentStudent = null;
+const PAGE_SIZE = 50;
+let page = 0;
+
+// Major stats (from dataset)
+const majorStats = {
+  'Artificial Intelligence': 1025,
+  'Computer Science': 1329,
+  'Cybersecurity': 776,
+  'Data Science': 768,
+  'Information Systems': 586,
+  'Information Technology': 643,
+  'Software Engineering': 600,
+};
+const semesterStats = {
+  '2025_Spring': 1564,
+  '2024_Fall': 1494,
+  '2024_Spring': 1421,
+  '2023_Fall': 1248,
+};
+
+// ── Init ──────────────────────────────────────────────────────
+window.onload = async () => {
+  renderDashboard();
+  await loadStudents();
+};
+
+function renderDashboard() {
+  // Major bars
+  const maxMajor = Math.max(...Object.values(majorStats));
+  const container = document.getElementById('major-bars');
+  Object.entries(majorStats).sort((a,b)=>b[1]-a[1]).forEach(([major, count]) => {
+    const pct = (count / maxMajor * 100).toFixed(1);
+    container.innerHTML += `
+      <div class="bar-group">
+        <div class="bar-label"><span>${major}</span><span>${count.toLocaleString()}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:0%" data-w="${pct}%"></div></div>
+      </div>`;
+  });
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill').forEach(b => b.style.width = b.dataset.w);
+  }, 300);
+
+  // Semester grid
+  const sg = document.getElementById('sem-grid');
+  Object.entries(semesterStats).forEach(([sem, count]) => {
+    sg.innerHTML += `
+      <div class="sem-card">
+        <div class="sem-name">${sem.replace('_',' ')}</div>
+        <div class="sem-count">${count.toLocaleString()}</div>
+      </div>`;
+  });
+}
+
+async function loadStudents() {
+  try {
+    const res = await fetch(`${API}/students`);
+    if (!res.ok) throw new Error('API error');
+    allStudents = await res.json();
+  } catch(e) {
+    // Fallback: use hardcoded sample from dataset
+    allStudents = getSampleData();
+  }
+  filtered = [...allStudents];
+  renderTable();
+}
+
+function getSampleData() {
+  // Sample at-risk students from dataset (first 200)
+  const raw = [
+    {student_id:400001,semester:"2024_Spring",major:"Cybersecurity",cumulative_GPA:2.25,GPA:1.95,attendance_rate_pct:83.1,missed_assignments:2,midterms_total_30:15.6,coursework_30:17.8,term_grade_100:49.7,risk_prob:0.78},
+    {student_id:400003,semester:"2025_Spring",major:"Software Engineering",cumulative_GPA:2.01,GPA:1.9,attendance_rate_pct:89.7,missed_assignments:6,midterms_total_30:23.3,coursework_30:21.9,term_grade_100:72.1,risk_prob:0.72},
+    {student_id:400004,semester:"2024_Fall",major:"Information Technology",cumulative_GPA:2.44,GPA:1.92,attendance_rate_pct:87.0,missed_assignments:2,midterms_total_30:13.3,coursework_30:20.5,term_grade_100:53.2,risk_prob:0.81},
+    {student_id:400004,semester:"2025_Spring",major:"Information Technology",cumulative_GPA:1.92,GPA:1.79,attendance_rate_pct:69.6,missed_assignments:3,midterms_total_30:11.0,coursework_30:20.1,term_grade_100:55.4,risk_prob:0.88},
+    {student_id:400007,semester:"2025_Spring",major:"Information Systems",cumulative_GPA:2.44,GPA:1.64,attendance_rate_pct:85.8,missed_assignments:2,midterms_total_30:13.2,coursework_30:10.9,term_grade_100:38.3,risk_prob:0.91},
+    {student_id:400008,semester:"2023_Fall",major:"Computer Science",cumulative_GPA:2.21,GPA:1.82,attendance_rate_pct:49.7,missed_assignments:2,midterms_total_30:16.8,coursework_30:15.3,term_grade_100:43.8,risk_prob:0.85},
+    {student_id:400008,semester:"2024_Spring",major:"Computer Science",cumulative_GPA:1.82,GPA:1.56,attendance_rate_pct:50.6,missed_assignments:1,midterms_total_30:9.2,coursework_30:20.2,term_grade_100:38.7,risk_prob:0.93},
+    {student_id:400008,semester:"2024_Fall",major:"Computer Science",cumulative_GPA:1.56,GPA:0.94,attendance_rate_pct:60.0,missed_assignments:2,midterms_total_30:11.0,coursework_30:19.3,term_grade_100:49.8,risk_prob:0.96},
+    {student_id:400008,semester:"2025_Spring",major:"Computer Science",cumulative_GPA:0.94,GPA:1.45,attendance_rate_pct:51.3,missed_assignments:5,midterms_total_30:9.0,coursework_30:15.0,term_grade_100:37.6,risk_prob:0.97},
+    {student_id:400013,semester:"2024_Spring",major:"Information Technology",cumulative_GPA:2.61,GPA:1.92,attendance_rate_pct:82.5,missed_assignments:2,midterms_total_30:16.5,coursework_30:25.1,term_grade_100:60.5,risk_prob:0.74},
+    {student_id:400013,semester:"2025_Spring",major:"Information Technology",cumulative_GPA:2.07,GPA:1.91,attendance_rate_pct:63.7,missed_assignments:2,midterms_total_30:13.7,coursework_30:21.5,term_grade_100:56.1,risk_prob:0.82},
+    {student_id:400015,semester:"2024_Fall",major:"Computer Science",cumulative_GPA:2.58,GPA:1.77,attendance_rate_pct:58.2,missed_assignments:7,midterms_total_30:9.9,coursework_30:15.0,term_grade_100:44.2,risk_prob:0.89},
+    {student_id:400018,semester:"2024_Spring",major:"Artificial Intelligence",cumulative_GPA:2.08,GPA:2.75,attendance_rate_pct:48.4,missed_assignments:3,midterms_total_30:17.1,coursework_30:14.6,term_grade_100:40.5,risk_prob:0.71},
+    {student_id:400018,semester:"2025_Spring",major:"Artificial Intelligence",cumulative_GPA:2.33,GPA:1.72,attendance_rate_pct:58.4,missed_assignments:5,midterms_total_30:15.3,coursework_30:16.9,term_grade_100:46.9,risk_prob:0.83},
+    {student_id:400020,semester:"2023_Fall",major:"Information Technology",cumulative_GPA:2.56,GPA:1.72,attendance_rate_pct:44.2,missed_assignments:3,midterms_total_30:12.2,coursework_30:16.1,term_grade_100:43.0,risk_prob:0.87},
+    {student_id:400020,semester:"2024_Spring",major:"Information Technology",cumulative_GPA:1.72,GPA:1.86,attendance_rate_pct:54.0,missed_assignments:3,midterms_total_30:14.2,coursework_30:19.4,term_grade_100:57.3,risk_prob:0.79},
+    {student_id:400020,semester:"2024_Fall",major:"Information Technology",cumulative_GPA:1.86,GPA:1.5,attendance_rate_pct:54.1,missed_assignments:3,midterms_total_30:13.0,coursework_30:21.0,term_grade_100:42.3,risk_prob:0.88},
+    {student_id:400020,semester:"2025_Spring",major:"Information Technology",cumulative_GPA:1.5,GPA:1.83,attendance_rate_pct:69.7,missed_assignments:7,midterms_total_30:13.1,coursework_30:17.4,term_grade_100:51.9,risk_prob:0.86},
+    {student_id:400021,semester:"2023_Fall",major:"Information Technology",cumulative_GPA:2.23,GPA:1.83,attendance_rate_pct:75.1,missed_assignments:5,midterms_total_30:19.2,coursework_30:17.8,term_grade_100:54.7,risk_prob:0.76},
+    {student_id:400021,semester:"2024_Spring",major:"Information Technology",cumulative_GPA:1.83,GPA:1.74,attendance_rate_pct:67.7,missed_assignments:2,midterms_total_30:8.8,coursework_30:14.0,term_grade_100:28.2,risk_prob:0.94},
+    {student_id:400023,semester:"2023_Fall",major:"Data Science",cumulative_GPA:2.32,GPA:1.91,attendance_rate_pct:65.9,missed_assignments:2,midterms_total_30:16.0,coursework_30:18.6,term_grade_100:51.7,risk_prob:0.77},
+    {student_id:400023,semester:"2025_Spring",major:"Data Science",cumulative_GPA:2.4,GPA:1.71,attendance_rate_pct:61.7,missed_assignments:0,midterms_total_30:11.5,coursework_30:11.0,term_grade_100:40.5,risk_prob:0.84},
+    {student_id:400025,semester:"2023_Fall",major:"Cybersecurity",cumulative_GPA:2.05,GPA:1.88,attendance_rate_pct:85.3,missed_assignments:2,midterms_total_30:16.6,coursework_30:19.0,term_grade_100:47.6,risk_prob:0.73},
+    {student_id:400025,semester:"2024_Spring",major:"Cybersecurity",cumulative_GPA:1.88,GPA:1.62,attendance_rate_pct:93.5,missed_assignments:4,midterms_total_30:10.9,coursework_30:21.9,term_grade_100:55.1,risk_prob:0.80},
+    {student_id:400025,semester:"2024_Fall",major:"Cybersecurity",cumulative_GPA:1.62,GPA:1.65,attendance_rate_pct:77.3,missed_assignments:3,midterms_total_30:9.7,coursework_30:18.8,term_grade_100:41.7,risk_prob:0.87},
+    {student_id:400028,semester:"2025_Spring",major:"Software Engineering",cumulative_GPA:2.16,GPA:1.9,attendance_rate_pct:62.1,missed_assignments:3,midterms_total_30:10.5,coursework_30:27.4,term_grade_100:57.5,risk_prob:0.75},
+    {student_id:400029,semester:"2024_Fall",major:"Software Engineering",cumulative_GPA:2.85,GPA:2.46,attendance_rate_pct:52.7,missed_assignments:1,midterms_total_30:15.2,coursework_30:23.7,term_grade_100:60.4,risk_prob:0.70},
+    {student_id:400029,semester:"2025_Spring",major:"Software Engineering",cumulative_GPA:2.46,GPA:1.98,attendance_rate_pct:76.3,missed_assignments:3,midterms_total_30:18.4,coursework_30:19.2,term_grade_100:50.3,risk_prob:0.78},
+    {student_id:400030,semester:"2024_Fall",major:"Computer Science",cumulative_GPA:2.23,GPA:1.29,attendance_rate_pct:80.7,missed_assignments:5,midterms_total_30:11.9,coursework_30:16.5,term_grade_100:49.3,risk_prob:0.90},
+    {student_id:400031,semester:"2024_Fall",major:"Cybersecurity",cumulative_GPA:2.42,GPA:1.48,attendance_rate_pct:66.1,missed_assignments:6,midterms_total_30:6.3,coursework_30:17.9,term_grade_100:45.0,risk_prob:0.92},
+    {student_id:400031,semester:"2025_Spring",major:"Cybersecurity",cumulative_GPA:1.48,GPA:1.4,attendance_rate_pct:63.4,missed_assignments:5,midterms_total_30:9.8,coursework_30:17.3,term_grade_100:40.6,risk_prob:0.93},
+    {student_id:400035,semester:"2024_Spring",major:"Computer Science",cumulative_GPA:3.32,GPA:2.64,attendance_rate_pct:51.6,missed_assignments:0,midterms_total_30:18.3,coursework_30:18.6,term_grade_100:59.5,risk_prob:0.71},
+    {student_id:400036,semester:"2024_Spring",major:"Computer Science",cumulative_GPA:2.83,GPA:1.85,attendance_rate_pct:85.2,missed_assignments:1,midterms_total_30:11.5,coursework_30:17.1,term_grade_100:52.1,risk_prob:0.76},
+    {student_id:400037,semester:"2024_Fall",major:"Computer Science",cumulative_GPA:2.62,GPA:1.4,attendance_rate_pct:77.3,missed_assignments:1,midterms_total_30:16.6,coursework_30:21.7,term_grade_100:59.8,risk_prob:0.82},
+    {student_id:400038,semester:"2023_Fall",major:"Data Science",cumulative_GPA:1.51,GPA:1.25,attendance_rate_pct:62.9,missed_assignments:7,midterms_total_30:4.2,coursework_30:18.6,term_grade_100:32.1,risk_prob:0.97},
+    {student_id:400038,semester:"2024_Spring",major:"Data Science",cumulative_GPA:1.25,GPA:1.56,attendance_rate_pct:47.3,missed_assignments:3,midterms_total_30:12.3,coursework_30:14.8,term_grade_100:34.3,risk_prob:0.96},
+    {student_id:400038,semester:"2024_Fall",major:"Data Science",cumulative_GPA:1.56,GPA:1.65,attendance_rate_pct:50.3,missed_assignments:4,midterms_total_30:11.9,coursework_30:16.6,term_grade_100:37.3,risk_prob:0.95},
+    {student_id:400038,semester:"2025_Spring",major:"Data Science",cumulative_GPA:1.65,GPA:1.81,attendance_rate_pct:65.6,missed_assignments:6,midterms_total_30:10.6,coursework_30:17.5,term_grade_100:44.5,risk_prob:0.91},
+    {student_id:400041,semester:"2024_Spring",major:"Data Science",cumulative_GPA:2.77,GPA:1.9,attendance_rate_pct:83.6,missed_assignments:5,midterms_total_30:20.9,coursework_30:17.5,term_grade_100:62.0,risk_prob:0.74},
+    {student_id:400041,semester:"2024_Fall",major:"Data Science",cumulative_GPA:1.9,GPA:1.86,attendance_rate_pct:70.2,missed_assignments:2,midterms_total_30:18.5,coursework_30:23.4,term_grade_100:61.6,risk_prob:0.78},
+    {student_id:400041,semester:"2025_Spring",major:"Data Science",cumulative_GPA:1.86,GPA:1.69,attendance_rate_pct:88.8,missed_assignments:2,midterms_total_30:19.6,coursework_30:16.6,term_grade_100:58.9,risk_prob:0.80},
+    {student_id:400043,semester:"2024_Spring",major:"Information Technology",cumulative_GPA:2.13,GPA:1.77,attendance_rate_pct:58.8,missed_assignments:3,midterms_total_30:13.3,coursework_30:20.5,term_grade_100:52.4,risk_prob:0.83},
+    {student_id:400043,semester:"2024_Fall",major:"Information Technology",cumulative_GPA:1.77,GPA:1.86,attendance_rate_pct:77.4,missed_assignments:5,midterms_total_30:11.3,coursework_30:20.1,term_grade_100:47.0,risk_prob:0.85},
+    {student_id:400043,semester:"2025_Spring",major:"Information Technology",cumulative_GPA:1.86,GPA:1.66,attendance_rate_pct:67.1,missed_assignments:4,midterms_total_30:15.8,coursework_30:19.0,term_grade_100:47.2,risk_prob:0.86},
+    {student_id:400044,semester:"2023_Fall",major:"Cybersecurity",cumulative_GPA:2.52,GPA:2.48,attendance_rate_pct:47.7,missed_assignments:4,midterms_total_30:9.6,coursework_30:16.9,term_grade_100:47.4,risk_prob:0.79},
+    {student_id:400045,semester:"2023_Fall",major:"Cybersecurity",cumulative_GPA:1.68,GPA:1.32,attendance_rate_pct:50.0,missed_assignments:4,midterms_total_30:13.6,coursework_30:11.6,term_grade_100:36.5,risk_prob:0.94},
+    {student_id:400045,semester:"2024_Spring",major:"Cybersecurity",cumulative_GPA:1.32,GPA:1.51,attendance_rate_pct:40.0,missed_assignments:4,midterms_total_30:9.2,coursework_30:19.1,term_grade_100:37.7,risk_prob:0.96},
+    {student_id:400045,semester:"2024_Fall",major:"Cybersecurity",cumulative_GPA:1.51,GPA:1.69,attendance_rate_pct:41.8,missed_assignments:2,midterms_total_30:11.3,coursework_30:19.4,term_grade_100:44.8,risk_prob:0.93},
+    {student_id:400045,semester:"2025_Spring",major:"Cybersecurity",cumulative_GPA:1.69,GPA:1.27,attendance_rate_pct:51.9,missed_assignments:4,midterms_total_30:6.5,coursework_30:19.8,term_grade_100:30.0,risk_prob:0.97},
+  ];
+  return raw;
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+}
+
+function filterBySemester(sem) {
+  showPage('students');
+  document.getElementById('filter-semester').value = sem;
+  applyFilters();
+}
+
+// ── Table ─────────────────────────────────────────────────────
+function applyFilters() {
+  const sem = document.getElementById('filter-semester').value;
+  const major = document.getElementById('filter-major').value;
+  const search = document.getElementById('search-box').value.trim();
+  filtered = allStudents.filter(s => {
+    if (sem && s.semester !== sem) return false;
+    if (major && s.major !== major) return false;
+    if (search && !String(s.student_id).includes(search)) return false;
+    return true;
+  });
+  page = 0;
+  renderTable();
+}
+
+function getRiskLevel(prob) {
+  if (prob >= 0.9) return {label:'Critical', cls:'critical'};
+  if (prob >= 0.75) return {label:'High Risk', cls:'high'};
+  return {label:'Moderate', cls:'medium'};
+}
+
+function renderTable() {
+  const tbody = document.getElementById('students-tbody');
+  const start = page * PAGE_SIZE;
+  const slice = filtered.slice(start, start + PAGE_SIZE);
+  tbody.innerHTML = slice.map(s => {
+    const risk = getRiskLevel(s.risk_prob);
+    const attCls = s.attendance_rate_pct < 60 ? 'low' : '';
+    const gpaW = Math.min(100, (s.GPA / 4) * 100);
+    return `<tr onclick="openModal(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+      <td class="student-id-cell">#${s.student_id}</td>
+      <td>${s.semester.replace('_',' ')}</td>
+      <td>${s.major}</td>
+      <td>
+        <div class="gpa-bar">
+          ${s.GPA.toFixed(2)}
+          <div class="gpa-mini"><div class="gpa-mini-fill" style="width:${gpaW}%"></div></div>
+        </div>
+      </td>
+      <td class="att-val ${attCls}">${s.attendance_rate_pct}%</td>
+      <td>${s.missed_assignments}</td>
+      <td><span class="risk-badge ${risk.cls}"><span class="risk-dot"></span>${risk.label}</span></td>
+    </tr>`;
+  }).join('');
+
+  const total = filtered.length;
+  document.getElementById('results-count').textContent = `${total.toLocaleString()} students`;
+  document.getElementById('table-footer').textContent =
+    `Showing ${Math.min(start+1, total)}–${Math.min(start+PAGE_SIZE, total)} of ${total.toLocaleString()} at-risk students`;
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function openModal(s) {
+  currentStudent = s;
+  document.getElementById('modal-title').textContent = `Student #${s.student_id}`;
+  document.getElementById('modal-sub').textContent = `${s.major} · ${s.semester.replace('_',' ')}`;
+  const pct = Math.round(s.risk_prob * 100);
+  document.getElementById('modal-risk-pct').textContent = pct + '%';
+  document.getElementById('modal-risk-label').textContent = pct >= 90 ? 'Critical Risk — Immediate Action Required' : pct >= 75 ? 'High Risk — Advisor Intervention Recommended' : 'Moderate Risk — Monitor Closely';
+  setTimeout(() => document.getElementById('modal-risk-fill').style.width = pct + '%', 100);
+
+  document.getElementById('modal-details').innerHTML = `
+    <div class="detail-item"><div class="detail-item-label">Current GPA</div><div class="detail-item-val ${s.GPA<2?'warn':''}">${s.GPA.toFixed(2)}</div></div>
+    <div class="detail-item"><div class="detail-item-label">Cumulative GPA</div><div class="detail-item-val ${s.cumulative_GPA<2?'warn':''}">${s.cumulative_GPA.toFixed(2)}</div></div>
+    <div class="detail-item"><div class="detail-item-label">Attendance Rate</div><div class="detail-item-val ${s.attendance_rate_pct<60?'warn':''}">${s.attendance_rate_pct}%</div></div>
+    <div class="detail-item"><div class="detail-item-label">Missed Assignments</div><div class="detail-item-val ${s.missed_assignments>=4?'warn':''}">${s.missed_assignments}</div></div>
+    <div class="detail-item"><div class="detail-item-label">Midterm Score</div><div class="detail-item-val">${s.midterms_total_30}/30</div></div>
+    <div class="detail-item"><div class="detail-item-label">Coursework Score</div><div class="detail-item-val">${s.coursework_30}/30</div></div>
+  `;
+
+  document.getElementById('modal-rec').textContent = 'Enter a Groq API key above and click "Get AI Advice" to generate personalized recommendations for this student.';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.getElementById('modal-risk-fill').style.width = '0%';
+  }
+}
+
+async function getRecommendation() {
+  const key = document.getElementById('groq-key-input').value.trim();
+  const s = currentStudent;
+  if (!s) return;
+  const recEl = document.getElementById('modal-rec');
+  recEl.textContent = 'Generating recommendations...';
+  try {
+    const res = await fetch(`${API}/predict`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        semester: s.semester,
+        major: s.major,
+        attendance_rate_pct: s.attendance_rate_pct,
+        missed_assignments: s.missed_assignments,
+        midterms_total_30: s.midterms_total_30,
+        coursework_30: s.coursework_30,
+        groq_api_key: key
+      })
+    });
+    const data = await res.json();
+    recEl.textContent = data.recommendation || 'No recommendation returned. Please check your Groq API key.';
+  } catch(e) {
+    recEl.textContent = 'Could not connect to backend. Make sure the server is running on port 8000.';
+  }
+}
+</script>
+</body>
+</html>
